@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Load Run Tracker</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen flex flex-col justify-between select-none">
+
+    <!-- TOP HEADER -->
+    <header class="bg-white border-b border-slate-200 px-4 py-3 shadow-sm sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center space-x-3">
+                <div class="bg-blue-900 text-white font-black px-3 py-1.5 rounded text-xl tracking-wider flex items-center gap-1">
+                    <span class="text-orange-500">LOAD</span>RUN
+                </div>
+                
+            </div>
+
+            <!-- Live Clock & Settings -->
+            <div class="flex items-center space-x-4">
+                <div class="text-right">
+                    <div id="liveClock" class="text-2xl font-mono font-bold text-slate-700">09:10:22 am</div>
+                    <div id="liveDate" class="text-xs text-slate-400 font-medium">Mon 8 Jan</div>
+                </div>
+                <button onclick="toggleRosterModal()" class="p-2 text-slate-500 hover:text-blue-900 rounded-lg hover:bg-slate-100" title="Manage Staff Roster & Targets">
+                    <i data-lucide="settings" class="w-6 h-6"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT CONTAINER -->
+    <main class="max-w-7xl w-full mx-auto p-3 sm:p-6 flex-grow space-y-6">
+
+        <!-- MAIN DASHBOARD SPLIT GRID -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            <!-- LEFT PANEL: STAFF SELECTION (5 COLS) -->
+            <section class="lg:col-span-5 bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col justify-between">
+                <div>
+                    <div class="flex justify-between items-center mb-3">
+                        <div>
+                            <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                <i data-lucide="users" class="text-blue-600 w-5 h-5"></i>
+                                Select Staff Member
+                            </h2>
+                            <p class="text-xs text-slate-400">Green dots indicate active running timers</p>
+                        </div>
+                        <span id="selectedStaffLabel" class="text-xs font-semibold px-2.5 py-1  text-blue-700 rounded-md">
+                            
+                        </span>
+                    </div>
+
+                    <!-- Staff List Grid -->
+                    <div id="staffGrid" class="grid grid-cols-2 gap-2 max-h-[380px] overflow-y-auto pr-1">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-3 border-t border-slate-100 flex gap-2">
+                    <button onclick="openAddStaffPrompt()" class=" py-2 px-3 bg-slate-150 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg flex items-center justify-center gap-1.5 transition">
+                        <i data-lucide="user-plus" class="w-4 h-4"></i> Add Person
+                    </button>
+                    <button onclick="clearSelectedStaff()" class=" flex-1 py-2 px-3 bg-slate-200 hover:bg-slate-200 text-slate-800 text-sm font-semibold rounded-lg">
+                        Deselect
+                    </button>
+                </div>
+            </section>
+
+            <!-- RIGHT PANEL: TIMING CONTROLS & CATEGORY SPEED SUMMARY (7 COLS) -->
+            <section class="lg:col-span-7 space-y-6">
+
+                <!-- TIMING & SPEED CHECK CONTROL CARD -->
+                <div class="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-xl shadow-sm p-5 border border-slate-700">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <span id="runnerPulse" class="w-5 h-5 rounded-full bg-slate-600"></span>
+                            <h3 class="font-bold text-base tracking-wide text-yellow-400"></h3>
+                        </div>
+                        <span id="activeRunnerBadge" class="text-sm bg-slate-700 text-yellow-300 font-bold font-mono px-3 py-1 rounded-md">
+                            
+                        </span>
+                    </div>
+
+                    <div id="timerControlsWrapper" class="opacity-40 pointer-events-none transition-opacity duration-200">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+
+                            <!-- Stopwatch Display -->
+                            <div class="flex flex-col items-center justify-center bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+                                <div id="stopwatchDisplay" class="text-4xl font-mono font-bold text-white tracking-widest">
+                                    00:00:00
+                                </div>
+                                <div class="flex gap-2 mt-2">
+                                    <button id="btnStartPause" onclick="toggleTimer()" class="px-6 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-md transition flex items-center gap-1">
+                                        <i data-lucide="play" class="w-3.5 h-3.5"></i> Start
+                                    </button>
+                                    <button onclick="resetCurrentTimer()" class="px-6 py-4 bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-xs rounded-md transition">
+                                        Reset
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Pallet & Category Inputs -->
+                            <div class="space-y-2 md:col-span-2">
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-400 mb-1">Area</label>
+                                        <select id="logCategory" onchange="onCategoryChange()" class="w-full bg-slate-800 border border-slate-700 text-white text-sm rounded-lg p-2 focus:ring-2 focus:ring-yellow-400 outline-none">
+                                            <option value="Ambient">Ambient</option>
+                                            <option value="Freezer">Freezer</option>
+                                            <option value="Longlife">Longlife</option>
+                                            <option value="Produce">Produce</option>
+                                            <option value="Shortlife">Shortlife</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-400 mb-1">Pallet Size</label>
+                                        <select id="logPallets" onchange="onPalletsChange()" class="w-full bg-slate-800 border border-slate-700 text-white text-sm rounded-lg p-2 focus:ring-2 focus:ring-yellow-400 outline-none">
+                                            <option value="50" selected>D</option>
+                                            <option value="100">DD</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <button onclick="logCurrentRun()" class="w-full py-2.5 bg-yellow-400 hover:bg-yellow-300 text-slate-950 font-bold text-sm rounded-lg shadow transition flex items-center justify-center gap-2">
+                                    <i data-lucide="check-circle" class="w-4 h-4"></i> Finish Pallet
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CATEGORIES SPEED AVERAGE & BENCHMARKS TABLE -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-1">
+                        <h2 class="text-sm font-bold text-slate-400 uppercase tracking-wider">
+                            Area Performance Averages
+                        </h2>
+                        <span id="categoryTableSubtitle" class="text-xs font-semibold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full self-start sm:self-auto">
+                            Select a staff member
+                        </span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="border-b border-slate-200 text-xs text-slate-400 uppercase">
+                                    <th class="py-2 px-3 font-semibold">Area</th>
+                                    <th class="py-2 px-3 font-semibold text-center">Avg Speed (mins/DD)</th>
+                                    <th class="py-2 px-3 font-semibold text-center">Benchmark Target</th>
+                                    <th class="py-2 px-3 font-semibold text-right">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="categoryTableBody" class="divide-y divide-slate-100 text-sm">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </section>
+        </div>
+
+        <!-- LOG HISTORY & WEEKLY SUMMARY SECTION -->
+        <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-base font-bold text-slate-800">Completed Runs Log</h2>
+                    <p class="text-xs text-slate-500">All completed runs saved locally</p>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button onclick="exportLogsCSV()" class="px-3 py-1.5 border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg flex items-center gap-1">
+                        <i data-lucide="download" class="w-3.5 h-3.5"></i> Export CSV
+                    </button>
+                    <button onclick="confirmClearLogs()" class="px-3 py-1.5 border border-red-200 text-red-600 hover:bg-red-50 text-xs font-semibold rounded-lg">
+                        Clear Log
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filter Controls -->
+            <div class="flex flex-wrap gap-2 text-xs">
+                <button onclick="filterLogs('ALL')" class="log-filter-btn px-3 py-1 rounded-full bg-slate-800 text-white font-medium" data-filter="ALL">All</button>
+                <button onclick="filterLogs('Ambient')" class="log-filter-btn px-3 py-1 rounded-full bg-slate-100 text-slate-600 font-medium" data-filter="Ambient">Ambient</button>
+                <button onclick="filterLogs('Freezer')" class="log-filter-btn px-3 py-1 rounded-full bg-slate-100 text-slate-600 font-medium" data-filter="Freezer">Freezer</button>
+                <button onclick="filterLogs('Longlife')" class="log-filter-btn px-3 py-1 rounded-full bg-slate-100 text-slate-600 font-medium" data-filter="Longlife">Longlife</button>
+                <button onclick="filterLogs('Produce')" class="log-filter-btn px-3 py-1 rounded-full bg-slate-100 text-slate-600 font-medium" data-filter="Produce">Produce</button>
+                <button onclick="filterLogs('Shortlife')" class="log-filter-btn px-3 py-1 rounded-full bg-slate-100 text-slate-600 font-medium" data-filter="Shortlife">Shortlife</button>
+            </div>
+
+            <!-- Table -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-xs sm:text-sm">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200">
+                            <th class="py-2.5 px-3">Time</th>
+                            <th class="py-2.5 px-3">Staff Member</th>
+                            <th class="py-2.5 px-3">Area</th>
+                            <th class="py-2.5 px-3 text-center">DDs</th>
+                            <th class="py-2.5 px-3 text-center">Duration</th>
+                            <th class="py-2.5 px-3 text-center">Mins / DD</th>
+                            <th class="py-2.5 px-3 text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logsTableBody" class="divide-y divide-slate-100">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-white border-t border-slate-200 py-3 text-center text-xs text-slate-400">
+        Load Run • Runner Average Speed Tracker
+    </footer>
+
+    <!-- ROSTER & BENCHMARK MANAGEMENT MODAL -->
+    <div id="rosterModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-5 space-y-4">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="font-bold text-slate-800 text-base">Edit Benchmarks</h3>
+                <button onclick="toggleRosterModal()" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div>
+                <h4 class="text-xs font-bold text-slate-400 uppercase mb-2">Area Target Benchmarks (Mins/DD)</h4>
+                <div id="benchmarkInputs" class="grid grid-cols-2 gap-2 text-xs">
+                    <!-- Dynamic inputs for benchmarks -->
+                </div>
+            </div>
+
+            <div class="pt-2">
+                <button onclick="saveBenchmarks()" class="w-full py-2 bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs rounded-lg">
+                    Save Benchmarks
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN JAVASCRIPT LOGIC -->
+    <script>
+        // Initial Default Benchmarks
+        const DEFAULT_CATEGORIES = {
+            'Ambient': { benchmark: 23 },
+            'Freezer': { benchmark: 26 },
+            'Longlife': { benchmark: 28 },
+            'Produce': { benchmark: 10 },
+            'Shortlife': { benchmark: 20 }
+        };
+
+        const DEFAULT_STAFF = [
+            "Dan", "Dillon", "Ethan", "Ian", "Isaac", "Jeremy", "Jon", "Jordie C", 
+			"Jordie O", "Lily", "Morgan", "Nicky", "Sherie", "Teal"
+             
+               
+        ];
+
+        // App State
+        let categories = JSON.parse(localStorage.getItem('loadmate_categories')) || DEFAULT_CATEGORIES;
+        let staffList = JSON.parse(localStorage.getItem('loadmate_staff')) || DEFAULT_STAFF;
+        let logs = JSON.parse(localStorage.getItem('loadmate_logs')) || [];
+        
+        // Individual Timers dictionary
+        let staffTimers = JSON.parse(localStorage.getItem('loadmate_staff_timers')) || {};
+
+        let selectedStaff = null;
+        let activeFilter = 'ALL';
+
+        let masterTicker = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            initClock();
+            initStaffTimers();
+            renderStaffGrid();
+            renderCategoryTable();
+            renderLogsTable();
+            renderBenchmarkModalInputs();
+
+            masterTicker = setInterval(tickAllRunningTimers, 1000);
+        });
+
+        function initStaffTimers() {
+            staffList.forEach(name => {
+                if (!staffTimers[name]) {
+                    staffTimers[name] = createEmptyTimerObj();
+                }
+            });
+            saveData();
+        }
+
+        function createEmptyTimerObj() {
+            return {
+                seconds: 0,
+                isRunning: false,
+                category: 'Ambient',
+                pallets: 1
+            };
+        }
+
+        function initClock() {
+            function update() {
+                const now = new Date();
+                const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }).toLowerCase();
+                const dateStr = now.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+                document.getElementById('liveClock').textContent = timeStr;
+                document.getElementById('liveDate').textContent = dateStr;
+            }
+            update();
+            setInterval(update, 1000);
+        }
+
+        function tickAllRunningTimers() {
+            let stateChanged = false;
+            Object.keys(staffTimers).forEach(name => {
+                if (staffTimers[name].isRunning) {
+                    staffTimers[name].seconds++;
+                    stateChanged = true;
+                }
+            });
+
+            if (stateChanged) {
+                saveData();
+            }
+
+            if (selectedStaff && staffTimers[selectedStaff]) {
+                updateStopwatchDisplayUI(staffTimers[selectedStaff].seconds);
+            }
+
+            updateStaffGridLiveTimes();
+        }
+
+        function renderStaffGrid() {
+            const grid = document.getElementById('staffGrid');
+            grid.innerHTML = '';
+
+            staffList.forEach(name => {
+                const isSelected = selectedStaff === name;
+                const tObj = staffTimers[name] || createEmptyTimerObj();
+                
+                let btnStyle = "bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-100 font-large";
+                if (isSelected) {
+                    btnStyle = "bg-blue-900 text-white font-bold border-blue-900 shadow";
+                }
+
+                const btn = document.createElement('button');
+                btn.id = `staff-btn-${name.replace(/\s+/g, '-')}`;
+                btn.className = `p-2.5 text-base rounded-lg border text-left flex items-center justify-between transition ${btnStyle}`;
+                btn.onclick = () => selectStaff(name);
+
+                const formattedTime = formatSeconds(tObj.seconds);
+                const runningIndicator = tObj.isRunning
+                    ? `<span class="flex items-center gap-1 font-mono text-[10px] ${isSelected ? 'text-yellow-300' : 'text-emerald-600'} font-bold">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> ${formattedTime}
+                       </span>`
+                    : (tObj.seconds > 0 ? `<span class="font-mono text-[10px] opacity-70">${formattedTime}</span>` : '');
+
+                btn.innerHTML = `
+                    <span class="truncate pr-1">${name}</span>
+                    ${runningIndicator}
+                `;
+                grid.appendChild(btn);
+            });
+        }
+
+        function updateStaffGridLiveTimes() {
+            staffList.forEach(name => {
+                const btn = document.getElementById(`staff-btn-${name.replace(/\s+/g, '-')}`);
+                if (!btn) return;
+                const tObj = staffTimers[name];
+                if (!tObj) return;
+
+                const isSelected = selectedStaff === name;
+                const formattedTime = formatSeconds(tObj.seconds);
+                const runningIndicator = tObj.isRunning
+                    ? `<span class="flex items-center gap-1 font-mono text-[10px] ${isSelected ? 'text-yellow-300' : 'text-emerald-600'} font-bold">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> ${formattedTime}
+                       </span>`
+                    : (tObj.seconds > 0 ? `<span class="font-mono text-[10px] opacity-70">${formattedTime}</span>` : '');
+
+                btn.innerHTML = `
+                    <span class="truncate pr-1">${name}</span>
+                    ${runningIndicator}
+                `;
+            });
+        }
+
+        function selectStaff(name) {
+            selectedStaff = name;
+            
+            if (!staffTimers[name]) {
+                staffTimers[name] = createEmptyTimerObj();
+            }
+
+            //document.getElementById('selectedStaffLabel').textContent = name;
+            document.getElementById('activeRunnerBadge').textContent = name.toUpperCase();
+
+            const wrapper = document.getElementById('timerControlsWrapper');
+            wrapper.classList.remove('opacity-40', 'pointer-events-none');
+
+            const tObj = staffTimers[name];
+            document.getElementById('logCategory').value = tObj.category || 'Ambient';
+            document.getElementById('logPallets').value = String(tObj.pallets || 1);
+
+            updateStopwatchDisplayUI(tObj.seconds);
+            updateTimerButtonUI(tObj.isRunning);
+            renderStaffGrid();
+            renderCategoryTable();
+        }
+
+        function clearSelectedStaff() {
+            selectedStaff = null;
+            document.getElementById('selectedStaffLabel').textContent = '';
+            document.getElementById('activeRunnerBadge').textContent = '';
+
+            const wrapper = document.getElementById('timerControlsWrapper');
+            wrapper.classList.add('opacity-40', 'pointer-events-none');
+
+            document.getElementById('stopwatchDisplay').textContent = '00:00:00';
+            document.getElementById('runnerPulse').className = 'w-5 h-5 rounded-full bg-slate-600';
+            renderStaffGrid();
+            renderCategoryTable();
+        }
+
+        function openAddStaffPrompt() {
+            const newName = prompt("Enter team member's name:");
+            if (newName && newName.trim()) {
+                const trimmed = newName.trim();
+                if (!staffList.includes(trimmed)) {
+                    staffList.push(trimmed);
+                    staffTimers[trimmed] = createEmptyTimerObj();
+                    saveData();
+                    renderStaffGrid();
+                }
+            }
+        }
+
+        function toggleTimer() {
+            if (!selectedStaff) return;
+
+            const tObj = staffTimers[selectedStaff];
+            tObj.isRunning = !tObj.isRunning;
+            saveData();
+
+            updateTimerButtonUI(tObj.isRunning);
+            renderStaffGrid();
+        }
+
+        function resetCurrentTimer() {
+            if (!selectedStaff) return;
+            staffTimers[selectedStaff].seconds = 0;
+            staffTimers[selectedStaff].isRunning = false;
+            saveData();
+
+            updateStopwatchDisplayUI(0);
+            updateTimerButtonUI(false);
+            renderStaffGrid();
+        }
+
+        function updateTimerButtonUI(isRunning) {
+            const btn = document.getElementById('btnStartPause');
+            const pulse = document.getElementById('runnerPulse');
+
+            if (isRunning) {
+                btn.innerHTML = `<i data-lucide="pause" class="w-3.5 h-3.5"></i> Pause`;
+                btn.className = "px-6 py-3 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-md transition flex items-center gap-1";
+                pulse.className = "w-3 h-3 rounded-full bg-emerald-400 animate-pulse";
+            } else {
+                btn.innerHTML = `<i data-lucide="play" class="w-3.5 h-3.5"></i> Start`;
+                btn.className = "px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-md transition flex items-center gap-1";
+                pulse.className = "w-3 h-3 rounded-full bg-yellow-400";
+            }
+            lucide.createIcons();
+        }
+
+        function updateStopwatchDisplayUI(totalSeconds) {
+            document.getElementById('stopwatchDisplay').textContent = formatSeconds(totalSeconds);
+        }
+
+        function formatSeconds(totalSeconds) {
+            const hrs = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+            const mins = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+            const secs = String(totalSeconds % 60).padStart(2, '0');
+            return `${hrs}:${mins}:${secs}`;
+        }
+
+        function onCategoryChange() {
+            if (selectedStaff && staffTimers[selectedStaff]) {
+                staffTimers[selectedStaff].category = document.getElementById('logCategory').value;
+                saveData();
+            }
+        }
+
+        function onPalletsChange() {
+            if (selectedStaff && staffTimers[selectedStaff]) {
+                staffTimers[selectedStaff].pallets = parseInt(document.getElementById('logPallets').value) || 1;
+                saveData();
+            }
+        }
+
+        function logCurrentRun() {
+            if (!selectedStaff) {
+                alert("Select a team member first!");
+                return;
+            }
+
+            const tObj = staffTimers[selectedStaff];
+            const category = document.getElementById('logCategory').value;
+            const pallets = parseInt(document.getElementById('logPallets').value)/100;
+
+            let durationMins = tObj.seconds / 60;
+            if (durationMins === 0) {
+                const manualMins = prompt(`Timer for ${selectedStaff} is 00:00:00. Enter duration in minutes manually:`, "15");
+                if (manualMins === null || isNaN(parseFloat(manualMins))) return;
+                durationMins = parseFloat(manualMins);
+            }
+
+            const minsPerPallet = (durationMins / pallets).toFixed(2);
+            const now = new Date();
+            const timeFormatted = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            const logEntry = {
+                id: Date.now(),
+                timestamp: timeFormatted,
+                staff: selectedStaff,
+                category: category,
+                pallets: pallets,
+                durationMins: durationMins.toFixed(1),
+                minsPerPallet: parseFloat(minsPerPallet)
+            };
+
+            logs.unshift(logEntry);
+
+            staffTimers[selectedStaff] = createEmptyTimerObj();
+            saveData();
+
+            updateStopwatchDisplayUI(0);
+            updateTimerButtonUI(false);
+            renderCategoryTable();
+            renderLogsTable();
+            renderStaffGrid();
+        }
+
+        function renderCategoryTable() {
+            const tbody = document.getElementById('categoryTableBody');
+            const subTitle = document.getElementById('categoryTableSubtitle');
+            tbody.innerHTML = '';
+
+            if (subTitle) {
+                subTitle.textContent = selectedStaff 
+                    ? `Showing: ${selectedStaff}`
+                    : `No staff selected`;
+            }
+
+            Object.keys(categories).forEach(catKey => {
+                const catLogs = selectedStaff 
+                    ? logs.filter(l => l.category === catKey && l.staff === selectedStaff)
+                    : [];
+
+                let speedAvgDisplay = '--';
+                let isGood = true;
+
+                if (selectedStaff && catLogs.length > 0) {
+                    const totalMins = catLogs.reduce((acc, l) => acc + (l.minsPerPallet * l.pallets), 0);
+                    const totalPallets = catLogs.reduce((acc, l) => acc + l.pallets, 0);
+                    const avg = (totalMins / totalPallets).toFixed(2);
+                    speedAvgDisplay = avg;
+                    isGood = parseFloat(avg) <= categories[catKey].benchmark;
+                }
+
+                const badgeColor = (!selectedStaff || catLogs.length === 0)
+                    ? 'bg-slate-100 text-slate-500'
+                    : (isGood ? 'bg-emerald-500 text-white' : 'bg-orange-500 text-white');
+
+                const statusLabel = !selectedStaff
+                    ? 'Select runner'
+                    : (catLogs.length === 0 ? 'No runs' : (isGood ? 'On Target' : 'Over Target'));
+
+                const tr = `
+                    <tr>
+                        <td class="py-3 px-3 font-bold text-slate-800">${catKey}</td>
+                        <td class="py-3 px-3 text-center font-mono font-bold">
+                            <span class="px-2.5 py-1 rounded-md text-sm ${badgeColor}">${speedAvgDisplay}</span>
+                        </td>
+                        <td class="py-3 px-3 text-center font-mono text-slate-600 bg-slate-50 font-semibold rounded">
+                            ${categories[catKey].benchmark}
+                        </td>
+                        <td class="py-3 px-3 text-right font-medium text-xs">
+                            <span class="${!selectedStaff || catLogs.length === 0 ? 'text-slate-400' : (isGood ? 'text-emerald-600' : 'text-orange-600')} font-semibold">${statusLabel}</span>
+                        </td>
+                    </tr>
+                `;
+                tbody.insertAdjacentHTML('beforeend', tr);
+            });
+        }
+
+        function renderLogsTable() {
+            const tbody = document.getElementById('logsTableBody');
+            tbody.innerHTML = '';
+
+            const filtered = activeFilter === 'ALL'
+                ? logs
+                : logs.filter(l => l.category === activeFilter);
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="py-6 text-center text-slate-400">No runs recorded for this filter.</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(log => {
+                const benchmark = categories[log.category]?.benchmark || 20;
+                const isFast = log.minsPerPallet <= benchmark;
+                const speedBadge = isFast
+                    ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                    : 'bg-orange-100 text-orange-800 border-orange-300';
+
+                const tr = `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="py-2.5 px-3 text-slate-500">${log.timestamp}</td>
+                        <td class="py-2.5 px-3 font-semibold text-slate-800">${log.staff}</td>
+                        <td class="py-2.5 px-3 text-slate-700">${log.category}</td>
+                        <td class="py-2.5 px-3 text-center font-semibold text-slate-800">${log.pallets}</td>
+                        <td class="py-2.5 px-3 text-center text-slate-600 font-mono">${log.durationMins}m</td>
+                        <td class="py-2.5 px-3 text-center">
+                            <span class="font-mono text-xs px-2 py-0.5 rounded border ${speedBadge}">
+                                ${log.minsPerPallet}
+                            </span>
+                        </td>
+                        <td class="py-2.5 px-3 text-right">
+                            <button onclick="deleteLog(${log.id})" class="text-slate-300 hover:text-red-500 transition">
+                                <i data-lucide="trash-2" class="w-4 h-4 inline"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tbody.insertAdjacentHTML('beforeend', tr);
+            });
+            lucide.createIcons();
+        }
+
+        function filterLogs(cat) {
+            activeFilter = cat;
+            document.querySelectorAll('.log-filter-btn').forEach(btn => {
+                if (btn.dataset.filter === cat) {
+                    btn.className = "log-filter-btn px-3 py-1 rounded-full bg-slate-800 text-white font-medium";
+                } else {
+                    btn.className = "log-filter-btn px-3 py-1 rounded-full bg-slate-100 text-slate-600 font-medium";
+                }
+            });
+            renderLogsTable();
+        }
+
+        function deleteLog(id) {
+            logs = logs.filter(l => l.id !== id);
+            saveData();
+            renderCategoryTable();
+            renderLogsTable();
+        }
+
+        function confirmClearLogs() {
+            if (confirm("Clear all recorded shift runs for the week?")) {
+                logs = [];
+                saveData();
+                renderCategoryTable();
+                renderLogsTable();
+            }
+        }
+
+        function exportLogsCSV() {
+            if (logs.length === 0) {
+                alert("No log data available to export.");
+                return;
+            }
+
+            let csv = "Time,Staff Member,Category,Pallets,Duration (Mins),Mins Per Pallet\n";
+            logs.forEach(l => {
+                csv += `"${l.timestamp}","${l.staff}","${l.category}",${l.pallets},${l.durationMins},${l.minsPerPallet}\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('href', url);
+            a.setAttribute('download', `LoadMate_Pallet_Speed_Log_${new Date().toISOString().slice(0,10)}.csv`);
+            a.click();
+        }
+
+        function toggleRosterModal() {
+            const modal = document.getElementById('rosterModal');
+            modal.classList.toggle('hidden');
+        }
+
+        function renderBenchmarkModalInputs() {
+            const container = document.getElementById('benchmarkInputs');
+            container.innerHTML = '';
+            Object.keys(categories).forEach(cat => {
+                const inputHtml = `
+                    <div class="bg-slate-50 p-2 rounded border border-slate-200 flex justify-between items-center">
+                        <label class="font-semibold text-slate-700">${cat}:</label>
+                        <input type="number" id="bm_${cat}" value="${categories[cat].benchmark}" class="w-16 p-1 border rounded text-center font-mono font-bold bg-white">
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', inputHtml);
+            });
+        }
+
+        function saveBenchmarks() {
+            Object.keys(categories).forEach(cat => {
+                const val = parseInt(document.getElementById(`bm_${cat}`).value);
+                if (!isNaN(val) && val > 0) {
+                    categories[cat].benchmark = val;
+                }
+            });
+            saveData();
+            renderCategoryTable();
+            toggleRosterModal();
+        }
+
+        function saveData() {
+            localStorage.setItem('loadmate_categories', JSON.stringify(categories));
+            localStorage.setItem('loadmate_staff', JSON.stringify(staffList));
+            localStorage.setItem('loadmate_logs', JSON.stringify(logs));
+            localStorage.setItem('loadmate_staff_timers', JSON.stringify(staffTimers));
+        }
+    </script>
+</body>
+</html>
