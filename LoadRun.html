@@ -121,8 +121,8 @@
                                     <div>
                                         <label class="block text-xs font-semibold text-slate-400 mb-1">Pallet Size</label>
                                         <select id="logPallets" onchange="onPalletsChange()" class="w-full bg-slate-800 border border-slate-700 text-white text-sm rounded-lg p-2 focus:ring-2 focus:ring-yellow-400 outline-none">
+                                            <option value="100" >DD</option>
                                             <option value="50" selected>D</option>
-                                            <option value="100">DD</option>
                                         </select>
                                     </div>
                                 </div>
@@ -303,7 +303,7 @@
                 seconds: 0,
                 isRunning: false,
                 category: 'Ambient',
-                pallets: 1
+                pallets: 100
             };
         }
 
@@ -409,7 +409,7 @@
 
             const tObj = staffTimers[name];
             document.getElementById('logCategory').value = tObj.category || 'Ambient';
-            document.getElementById('logPallets').value = String(tObj.pallets || 1);
+            document.getElementById('logPallets').value = String(tObj.pallets || 100);
 
             updateStopwatchDisplayUI(tObj.seconds);
             updateTimerButtonUI(tObj.isRunning);
@@ -502,7 +502,7 @@
 
         function onPalletsChange() {
             if (selectedStaff && staffTimers[selectedStaff]) {
-                staffTimers[selectedStaff].pallets = parseInt(document.getElementById('logPallets').value) || 1;
+                staffTimers[selectedStaff].pallets = parseInt(document.getElementById('logPallets').value) || 100;
                 saveData();
             }
         }
