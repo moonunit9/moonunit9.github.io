@@ -110,24 +110,22 @@
                             </div>
 
                             <!-- Pallet & Category Inputs -->
-                            <div class="space-y-2 md:col-span-2">
-                                <div class="grid grid-cols-2 gap-2">
-                                    <div>
-                                        <label class="block text-xs font-semibold text-slate-400 mb-1">Area</label>
-                                        <select id="logCategory" onchange="onCategoryChange()" class="w-full bg-slate-800 border border-slate-700 text-white text-sm rounded-lg p-2 focus:ring-2 focus:ring-yellow-400 outline-none">
-                                            <option value="Ambient">Ambient</option>
-                                            <option value="Freezer">Freezer</option>
-                                            <option value="Longlife">Longlife</option>
-                                            <option value="Produce">Produce</option>
-                                            <option value="Shortlife">Shortlife</option>
-                                        </select>
+                            <div class="space-y-3 md:col-span-2">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-400 mb-1">Area</label>
+                                    <div class="grid grid-cols-3 sm:grid-cols-5 gap-1 bg-slate-800 border border-slate-700 rounded-lg p-1">
+                                        <button type="button" id="btnAreaAmbient" onclick="setArea('Ambient')" class="py-2 px-1 text-[11px] sm:text-xs font-bold rounded bg-yellow-400 text-slate-950 transition truncate">Ambient</button>
+                                        <button type="button" id="btnAreaFreezer" onclick="setArea('Freezer')" class="py-2 px-1 text-[11px] sm:text-xs font-bold rounded text-slate-400 hover:text-white transition truncate">Freezer</button>
+                                        <button type="button" id="btnAreaLonglife" onclick="setArea('Longlife')" class="py-2 px-1 text-[11px] sm:text-xs font-bold rounded text-slate-400 hover:text-white transition truncate">Longlife</button>
+                                        <button type="button" id="btnAreaProduce" onclick="setArea('Produce')" class="py-2 px-1 text-[11px] sm:text-xs font-bold rounded text-slate-400 hover:text-white transition truncate">Produce</button>
+                                        <button type="button" id="btnAreaShortlife" onclick="setArea('Shortlife')" class="py-2 px-1 text-[11px] sm:text-xs font-bold rounded text-slate-400 hover:text-white transition truncate">Shortlife</button>
                                     </div>
-                                    <div>
-                                        <label class="block text-xs font-semibold text-slate-400 mb-1">Pallet Size</label>
-                                        <div class="flex bg-slate-800 border border-slate-700 rounded-lg p-1 gap-1">
-                                            <button type="button" id="btnPalletDD" onclick="setPalletSize(100)" class="flex-1 py-1.5 text-xs font-bold rounded bg-yellow-400 text-slate-950 transition">DD</button>
-                                            <button type="button" id="btnPalletD" onclick="setPalletSize(50)" class="flex-1 py-1.5 text-xs font-bold rounded text-slate-400 hover:text-white transition">D</button>
-                                        </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-400 mb-1">Pallet Size</label>
+                                    <div class="flex bg-slate-800 border border-slate-700 rounded-lg p-1 gap-1 max-w-[200px]">
+                                        <button type="button" id="btnPalletDD" onclick="setPalletSize(100)" class="flex-1 py-1.5 text-xs font-bold rounded bg-yellow-400 text-slate-950 transition">DD</button>
+                                        <button type="button" id="btnPalletD" onclick="setPalletSize(50)" class="flex-1 py-1.5 text-xs font-bold rounded text-slate-400 hover:text-white transition">D</button>
                                     </div>
                                 </div>
 
@@ -529,7 +527,7 @@
             wrapper.classList.remove('opacity-40', 'pointer-events-none');
 
             const tObj = staffTimers[name];
-            document.getElementById('logCategory').value = tObj.category || 'Ambient';
+            updateAreaButtonsUI(tObj.category || 'Ambient');
             updatePalletButtonsUI(tObj.pallets || 100);
 
             updateStopwatchDisplayUI(tObj.seconds);
@@ -620,11 +618,25 @@
             return `${hrs}:${mins}:${secs}`;
         }
 
-        function onCategoryChange() {
+        function setArea(category) {
             if (selectedStaff && staffTimers[selectedStaff]) {
-                staffTimers[selectedStaff].category = document.getElementById('logCategory').value;
+                staffTimers[selectedStaff].category = category;
                 saveData();
+                updateAreaButtonsUI(category);
             }
+        }
+
+        function updateAreaButtonsUI(activeCategory) {
+            const categoriesList = ['Ambient', 'Freezer', 'Longlife', 'Produce', 'Shortlife'];
+            categoriesList.forEach(cat => {
+                const btn = document.getElementById(`btnArea${cat}`);
+                if (!btn) return;
+                if (cat === activeCategory) {
+                    btn.className = "py-2 px-1 text-[11px] sm:text-xs font-bold rounded bg-yellow-400 text-slate-950 transition truncate";
+                } else {
+                    btn.className = "py-2 px-1 text-[11px] sm:text-xs font-bold rounded text-slate-400 hover:text-white transition truncate";
+                }
+            });
         }
 
         function setPalletSize(size) {
@@ -656,7 +668,7 @@
             }
 
             const tObj = staffTimers[selectedStaff];
-            const category = document.getElementById('logCategory').value;
+            const category = tObj.category || 'Ambient';
             const pallets = (tObj.pallets || 100) / 100;
 
             let durationMins = tObj.seconds / 60;
@@ -705,6 +717,7 @@
             updateStopwatchDisplayUI(0);
             updateTimerButtonUI(false);
             updatePalletButtonsUI(100);
+            updateAreaButtonsUI('Ambient');
             renderCategoryTable();
             renderLogsTable();
             renderStaffGrid();
