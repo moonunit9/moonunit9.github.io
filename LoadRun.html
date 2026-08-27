@@ -18,7 +18,11 @@
                 <div class="bg-blue-900 text-white font-black px-3 py-1.5 rounded text-xl tracking-wider flex items-center gap-1">
                     <span class="text-orange-500">LOAD</span>RUN
                 </div>
-                
+                <!-- Wake Lock Status Indicator -->
+                <div id="wakeLockStatus" class="hidden items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 border border-slate-200">
+                    <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+                    <span>Screen Awake: Standby</span>
+                </div>
             </div>
 
             <!-- Live Clock & Settings -->
@@ -246,6 +250,55 @@
         </div>
     </div>
 
+    <!-- RUN DETAILS MODAL -->
+    <div id="runDetailsModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-5 space-y-4">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="font-bold text-slate-800 text-base">Run Details</h3>
+                <button onclick="toggleRunDetailsModal()" class="text-slate-400 hover:text-slate-600">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-3 text-sm">
+                <div class="flex justify-between border-b border-slate-100 py-2">
+                    <span class="text-slate-500 font-medium">Staff Member</span>
+                    <span id="detailStaff" class="font-bold text-slate-800">-</span>
+                </div>
+                <div class="flex justify-between border-b border-slate-100 py-2">
+                    <span class="text-slate-500 font-medium">Area</span>
+                    <span id="detailCategory" class="font-bold text-slate-800">-</span>
+                </div>
+                <div class="flex justify-between border-b border-slate-100 py-2">
+                    <span class="text-slate-500 font-medium">Pallet Size</span>
+                    <span id="detailPallets" class="font-bold text-slate-800">-</span>
+                </div>
+                <div class="flex justify-between border-b border-slate-100 py-2">
+                    <span class="text-slate-500 font-medium">Duration</span>
+                    <span id="detailDuration" class="font-bold text-slate-800">-</span>
+                </div>
+                <div class="flex justify-between border-b border-slate-100 py-2">
+                    <span class="text-slate-500 font-medium">Mins / Pallet</span>
+                    <span id="detailMinsPerPallet" class="font-bold text-slate-800">-</span>
+                </div>
+                <div class="flex justify-between border-b border-slate-100 py-2">
+                    <span class="text-slate-500 font-medium">Start Time</span>
+                    <span id="detailStartTime" class="font-mono font-semibold text-slate-700 text-right">-</span>
+                </div>
+                <div class="flex justify-between border-b border-slate-100 py-2">
+                    <span class="text-slate-500 font-medium">End Time</span>
+                    <span id="detailEndTime" class="font-mono font-semibold text-slate-700 text-right">-</span>
+                </div>
+            </div>
+
+            <div class="pt-2">
+                <button onclick="toggleRunDetailsModal()" class="w-full py-2 bg-slate-900 hover:bg-blue-800 text-white font-bold text-xs rounded-lg">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- MAIN JAVASCRIPT LOGIC -->
     <script>
         // Initial Default Benchmarks
@@ -276,6 +329,61 @@
         let activeFilter = 'ALL';
 
         let masterTicker = null;
+        let wakeLock = null;
+
+        async function requestWakeLock() {
+            if (!('wakeLock' in navigator)) {
+                updateWakeLockUI('unsupported');
+                return;
+            }
+            try {
+                wakeLock = await navigator.wakeLock.request('screen');
+                updateWakeLockUI('active');
+                
+                wakeLock.addEventListener('release', () => {
+                    updateWakeLockUI('inactive');
+                });
+            } catch (err) {
+                console.error(`Wake lock failed: ${err.name}, ${err.message}`);
+                updateWakeLockUI('failed');
+            }
+        }
+
+        function updateWakeLockUI(state) {
+            const el = document.getElementById('wakeLockStatus');
+            if (!el) return;
+            
+            el.classList.remove('hidden');
+            el.classList.add('flex');
+            
+            const dot = el.querySelector('span:first-child');
+            const text = el.querySelector('span:last-child');
+            
+            if (state === 'active') {
+                el.className = "flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200";
+                dot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+                text.textContent = "Screen Awake: On";
+            } else if (state === 'inactive') {
+                el.className = "flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 border border-slate-200";
+                dot.className = "w-2 h-2 rounded-full bg-slate-400";
+                text.textContent = "Screen Awake: Standby";
+            } else if (state === 'unsupported') {
+                el.className = "flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-200";
+                dot.className = "w-2 h-2 rounded-full bg-amber-500";
+                text.textContent = "Screen Awake: Unsupported";
+            } else if (state === 'failed') {
+                el.className = "flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-red-100 text-red-800 border border-red-200";
+                dot.className = "w-2 h-2 rounded-full bg-red-500";
+                text.textContent = "Screen Awake: Failed";
+            }
+        }
+
+        // Re-request wake lock when page becomes visible again
+        document.addEventListener('visibilitychange', async () => {
+            if (document.visibilityState === 'visible') {
+                await requestWakeLock();
+            }
+        });
 
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
@@ -287,6 +395,18 @@
             renderBenchmarkModalInputs();
 
             masterTicker = setInterval(tickAllRunningTimers, 1000);
+
+            // Attempt initial wake lock request
+            requestWakeLock();
+
+            // Request wake lock on first user interaction as fallback
+            const handleInteraction = async () => {
+                await requestWakeLock();
+                document.removeEventListener('click', handleInteraction);
+                document.removeEventListener('touchstart', handleInteraction);
+            };
+            document.addEventListener('click', handleInteraction);
+            document.addEventListener('touchstart', handleInteraction);
         });
 
         function initStaffTimers() {
@@ -303,7 +423,8 @@
                 seconds: 0,
                 isRunning: false,
                 category: 'Ambient',
-                pallets: 100
+                pallets: 100,
+                startTime: null
             };
         }
 
@@ -449,6 +570,11 @@
 
             const tObj = staffTimers[selectedStaff];
             tObj.isRunning = !tObj.isRunning;
+            
+            // Set startTime when timer starts running, if not already set
+            if (tObj.isRunning && !tObj.startTime) {
+                tObj.startTime = new Date().toISOString();
+            }
             saveData();
 
             updateTimerButtonUI(tObj.isRunning);
@@ -459,6 +585,7 @@
             if (!selectedStaff) return;
             staffTimers[selectedStaff].seconds = 0;
             staffTimers[selectedStaff].isRunning = false;
+            staffTimers[selectedStaff].startTime = null;
             saveData();
 
             updateStopwatchDisplayUI(0);
@@ -518,10 +645,25 @@
             const pallets = parseInt(document.getElementById('logPallets').value)/100;
 
             let durationMins = tObj.seconds / 60;
+            let endTime = new Date().toISOString();
+            let startTime = tObj.startTime;
+
             if (durationMins === 0) {
                 const manualMins = prompt(`Timer for ${selectedStaff} is 00:00:00. Enter duration in minutes manually:`, "15");
                 if (manualMins === null || isNaN(parseFloat(manualMins))) return;
                 durationMins = parseFloat(manualMins);
+                
+                const endDt = new Date();
+                const startDt = new Date(endDt.getTime() - durationMins * 60 * 1000);
+                startTime = startDt.toISOString();
+                endTime = endDt.toISOString();
+            } else {
+                if (!startTime) {
+                    const endDt = new Date();
+                    const startDt = new Date(endDt.getTime() - tObj.seconds * 1000);
+                    startTime = startDt.toISOString();
+                    endTime = endDt.toISOString();
+                }
             }
 
             const minsPerPallet = (durationMins / pallets).toFixed(2);
@@ -535,7 +677,9 @@
                 category: category,
                 pallets: pallets,
                 durationMins: durationMins.toFixed(1),
-                minsPerPallet: parseFloat(minsPerPallet)
+                minsPerPallet: parseFloat(minsPerPallet),
+                startTime: startTime,
+                endTime: endTime
             };
 
             logs.unshift(logEntry);
@@ -626,7 +770,7 @@
                 const tr = `
                     <tr class="hover:bg-slate-50 transition">
                         <td class="py-2.5 px-3 text-slate-500">${log.timestamp}</td>
-                        <td class="py-2.5 px-3 font-semibold text-slate-800">${log.staff}</td>
+                        <td class="py-2.5 px-3 font-semibold text-blue-900 hover:text-blue-700 hover:underline cursor-pointer" onclick="showRunDetails(${log.id})">${log.staff}</td>
                         <td class="py-2.5 px-3 text-slate-700">${log.category}</td>
                         <td class="py-2.5 px-3 text-center font-semibold text-slate-800">${log.pallets}</td>
                         <td class="py-2.5 px-3 text-center text-slate-600 font-mono">${log.durationMins}m</td>
@@ -681,9 +825,9 @@
                 return;
             }
 
-            let csv = "Time,Staff Member,Category,Pallets,Duration (Mins),Mins Per Pallet\n";
+            let csv = "Time,Staff Member,Category,Pallets,Duration (Mins),Mins Per Pallet,Start Time,End Time\n";
             logs.forEach(l => {
-                csv += `"${l.timestamp}","${l.staff}","${l.category}",${l.pallets},${l.durationMins},${l.minsPerPallet}\n`;
+                csv += `"${l.timestamp}","${l.staff}","${l.category}",${l.pallets},${l.durationMins},${l.minsPerPallet},"${l.startTime || ''}","${l.endTime || ''}"\n`;
             });
 
             const blob = new Blob([csv], { type: 'text/csv' });
@@ -697,6 +841,39 @@
         function toggleRosterModal() {
             const modal = document.getElementById('rosterModal');
             modal.classList.toggle('hidden');
+        }
+
+        function toggleRunDetailsModal() {
+            const modal = document.getElementById('runDetailsModal');
+            modal.classList.toggle('hidden');
+        }
+
+        function showRunDetails(id) {
+            const log = logs.find(l => l.id === id);
+            if (!log) return;
+
+            document.getElementById('detailStaff').textContent = log.staff;
+            document.getElementById('detailCategory').textContent = log.category;
+            document.getElementById('detailPallets').textContent = log.pallets === 1 ? 'DD (Double Decker)' : 'D (Single)';
+            document.getElementById('detailDuration').textContent = `${parseFloat(log.durationMins).toFixed(1)} mins`;
+            document.getElementById('detailMinsPerPallet').textContent = `${parseFloat(log.minsPerPallet).toFixed(2)} mins/DD`;
+            
+            document.getElementById('detailStartTime').textContent = formatLogTime(log.startTime);
+            document.getElementById('detailEndTime').textContent = formatLogTime(log.endTime);
+
+            toggleRunDetailsModal();
+        }
+
+        function formatLogTime(isoString) {
+            if (!isoString) return '--:--:--';
+            try {
+                const date = new Date(isoString);
+                const timeStr = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+                const dateStr = date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+                return `${timeStr} (${dateStr})`;
+            } catch (e) {
+                return '--:--:--';
+            }
         }
 
         function renderBenchmarkModalInputs() {
